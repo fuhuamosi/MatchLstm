@@ -5,8 +5,11 @@ import tensorflow as tf
 import numpy as np
 import tensorflow.contrib as contrib
 
+from app.decorator import exe_time
+
 
 class MatchLstm:
+    @exe_time
     def __init__(self, vocab_size, sentence_size, embedding_size,
                  word_embedding, initializer=tf.truncated_normal_initializer(stddev=0.1),
                  session=tf.Session(), num_class=3,
@@ -84,6 +87,7 @@ class MatchLstm:
                                                                 name='cross_entropy')
         cross_entropy_sum = tf.reduce_sum(cross_entropy, name='cross_entropy_sum')
         self.loss_op = tf.div(cross_entropy_sum, tf.cast(self._batch_size, dtype=tf.float32))
+        self.predict_op = tf.arg_max(self.logits, dimension=1)
 
     def _match_sent(self, i, h_m_arr):
         h_s_i = self.h_s[i]
