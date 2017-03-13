@@ -10,8 +10,9 @@ import os
 from sklearn import metrics
 import numpy as np
 
-tf.flags.DEFINE_float('learning_rate', 0.001, '')
-tf.flags.DEFINE_float('decay_ratio', 0.95, '')
+tf.flags.DEFINE_float('learning_rate', 0.001, 'Initial learning rate')
+tf.flags.DEFINE_float('decay_ratio', 0.95, 'Learning rate decay ratio')
+tf.flags.DEFINE_float('min_lr', 1e-8, 'Min learning rate')
 tf.flags.DEFINE_float('max_grad_norm', 40.0, 'Clip gradients to this norm.')
 tf.flags.DEFINE_integer('evaluation_interval', 100, 'Evaluate and print results every x epochs')
 tf.flags.DEFINE_integer('batch_size', 30, 'Batch size for training.')
@@ -72,34 +73,23 @@ def random_choice(data, size):
     return sample_data
 
 
+def run_epoch(sess, model, train_data, train_len, loss_list, i):
+    start = i * FLAGS.batch_size % train_len
+    end = (i + 1) * FLAGS.batch_size % train_len
+    if start < end:
+        data = train_data[start:end]
+    else:
+        data = train_data[start:] + train_data[:end]
+    data = unpack_data(data)
+    loss, _ = sess.run([model.loss_op, model.train_op],
+                       feed_dict={model.premises: data[0],
+                                  model.hypotheses: data[1],
+                                  model.labels: data[3],
+                                  model.lr: FLAGS.learning_rate})
+    loss_list.append(loss)
+
+
 @exe_time
-def run_epoch(sess, model, train_data, valid_data, test_data):
-    train_len = len(train_data)
-    for i in range(FLAGS.epochs):
-        start = i * FLAGS.batch_size % train_len
-        end = (i + 1) * FLAGS.batch_size % train_len
-        if start < end:
-            data = train_data[start:end]
-        else:
-            data = train_data[start:] + train_data[:end]
-        data = unpack_data(data)
-        loss, _ = sess.run([model.loss_op, model.train_op],
-                           feed_dict={model.premises: data[0],
-                                      model.hypotheses: data[1],
-                                      model.labels: data[3],
-                                      model.lr: FLAGS.learning_rate})
-        print("Epoch {}'s loss: {}".format(i, loss))
-        if i % FLAGS.evaluation_interval == 0:
-            sample_size = 1000
-            sample_valid = random_choice(valid_data, size=sample_size)
-            sample_test = random_choice(test_data, size=sample_size)
-
-            print('\n')
-            validate_data(sess, sample_valid, model, name='valid')
-            validate_data(sess, sample_test, model, name='test')
-            print('\n')
-
-
 def validate_data(sess, data, model, name):
     data = unpack_data(data)
     preds = []
@@ -117,13 +107,39 @@ def main(_):
     word2index, word_embeddings = load_dict()
     train_data, valid_data, test_data = vectorize_all_data(train_data, valid_data, test_data,
                                                            word2index)
-
+    lr = FLAGS.learning_rate
     with tf.Session() as sess:
         model = MatchLstm(vocab_size=len(word2index), sentence_size=FLAGS.sent_size,
                           embedding_size=FLAGS.embedding_size,
-                          word_embedding=word_embeddings, session=sess)
+                          word_embedding=word_embeddings, session=sess,
+                          initial_lr=lr)
         sess.run(tf.global_variables_initializer())
-        run_epoch(sess, model, train_data, valid_data, test_data)
+
+        train_len = len(train_data)
+        loss_list = []
+        for i in range(FLAGS.epochs):
+            run_epoch(sess, model, train_data, train_len, loss_list, i)
+
+            if i % FLAGS.evaluation_interval == 0:
+                loss_arr = np.array(loss_list)
+                print('Epoch {} loss mean, std: {}  {}'.format(i, np.mean(loss_arr),
+                                                               np.std(loss_arr)))
+                loss_list.clear()
+
+                sample_size = 1000
+                sample_valid = random_choice(valid_data, size=sample_size)
+                sample_test = random_choice(test_data, size=sample_size)
+
+                print('\n')
+                validate_data(sess, sample_valid, model, name='valid')
+                validate_data(sess, sample_test, model, name='test')
+
+                if lr > FLAGS.min_lr:
+                    lr *= FLAGS.decay_ratio
+                    sess.run(model.lr_update_op, feed_dict={model.new_lr: lr})
+                    print('New learning rate is {}'.format(lr))
+
+                print('\n')
 
 
 if __name__ == '__main__':

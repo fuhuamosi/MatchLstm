@@ -10,7 +10,7 @@ def exe_time(func):
         start = time.time()
         back = func(*args, **kwargs)
         end = time.time()
-        print("Function {0} cost {1}s\n".format(func.__name__, end - start))
+        print("Function {0} cost {1}s".format(func.__name__, end - start))
         return back
 
     return wrapper

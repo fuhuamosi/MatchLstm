@@ -13,7 +13,7 @@ class MatchLstm:
     def __init__(self, vocab_size, sentence_size, embedding_size,
                  word_embedding, initializer=tf.truncated_normal_initializer(stddev=0.1),
                  session=tf.Session(), num_class=3,
-                 window_size=4, name='MatchLstm'):
+                 window_size=4, name='MatchLstm', initial_lr=0.001):
         self._vocab_size = vocab_size
         self._sentence_size = sentence_size
         self._embedding_size = embedding_size
@@ -23,6 +23,7 @@ class MatchLstm:
         self._num_class = num_class
         self._sess = session
         self._window_size = window_size
+        self._initial_lr = initial_lr
 
         self._build_inputs_and_vars()
 
@@ -37,8 +38,13 @@ class MatchLstm:
                                          name='hypotheses')
         self.labels = tf.placeholder(shape=[None, self._num_class], dtype=tf.float32,
                                      name='labels')
-        self.lr = tf.placeholder(shape=[], dtype=tf.float32, name='learning_rate')
         self._batch_size = tf.shape(self.premises)[0]
+
+        self.lr = tf.get_variable(shape=[], dtype=tf.float32, trainable=False,
+                                  initializer=tf.constant_initializer(self._initial_lr), name='lr')
+        self.new_lr = tf.placeholder(shape=[], dtype=tf.float32,
+                                     name='new_lr')
+        self.lr_update_op = tf.assign(self.lr, self.new_lr)
 
         with tf.variable_scope(self._name):
             self._word_embedding = tf.get_variable(name='word_embedding',
