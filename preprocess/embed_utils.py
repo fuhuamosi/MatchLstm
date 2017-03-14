@@ -60,7 +60,7 @@ def embed_word2vec():
     serialize(word_embeddings, os.path.join(DATA_DIR, 'word_embeddings.bin'))
 
 
-def embed_glove():
+def embed_glove2():
     # prepare_corpus()
     corpus = read_corpus(CORPUS_PATH)
     corpus_model = Corpus()
@@ -79,7 +79,24 @@ def embed_glove():
     serialize(word_embeddings, os.path.join(DATA_DIR, 'word_embeddings_glove.bin'))
 
 
+def embed_glove(path):
+    model = {}
+    with open(path, 'r') as f:
+        for line in f:
+            glove_list = line.strip().split()
+            word = glove_list[0]
+            vec = [float(x) for x in glove_list[1:]]
+            model[word] = vec
+    index2word = [_PAD, _NULL] + list(model.keys())
+    word2index = dict([(y, x) for (x, y) in enumerate(index2word)])
+    word_embeddings = [[0.0] * EMBEDDING_SIZE, [0.0] * EMBEDDING_SIZE]
+    for _, word in enumerate(index2word[2:]):
+        word_embeddings.append(model[word].tolist())
+    serialize(word2index, os.path.join(DATA_DIR, 'word2index_glove.bin'))
+    serialize(word_embeddings, os.path.join(DATA_DIR, 'word_embeddings_glove.bin'))
+
+
 if __name__ == '__main__':
     # embed_word2vec()
-    embed_glove()
+    embed_glove(os.path.join(DATA_DIR, ''))
     pass
