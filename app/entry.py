@@ -18,7 +18,7 @@ tf.flags.DEFINE_integer('evaluation_interval', 100, 'Evaluate and print results 
 tf.flags.DEFINE_integer('batch_size', 30, 'Batch size for training.')
 tf.flags.DEFINE_integer('sent_size', 80, 'Max sentence size.')
 tf.flags.DEFINE_integer('num_class', 3, 'Max sentence size.')
-tf.flags.DEFINE_integer('epochs', 20000, 'Number of epochs to train for.')
+tf.flags.DEFINE_integer('epochs', 25000, 'Number of epochs to train for.')
 tf.flags.DEFINE_integer('embedding_size', 300, 'Embedding size for embedding matrices.')
 tf.flags.DEFINE_string('data_dir', os.path.join('..', 'dataset'), 'Directory containing dataset')
 
@@ -72,7 +72,7 @@ def random_choice(data, size):
     sample_data = [data[s] for s in sub]
     return sample_data
 
-
+@exe_time
 def run_epoch(sess, model, train_data, train_len, loss_list, i):
     start = i * FLAGS.batch_size % train_len
     end = (i + 1) * FLAGS.batch_size % train_len
