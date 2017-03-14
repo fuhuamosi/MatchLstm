@@ -12,7 +12,7 @@ import numpy as np
 
 tf.flags.DEFINE_float('learning_rate', 0.001, 'Initial learning rate')
 tf.flags.DEFINE_float('decay_ratio', 0.95, 'Learning rate decay ratio')
-tf.flags.DEFINE_float('min_lr', 1e-8, 'Min learning rate')
+tf.flags.DEFINE_float('min_lr', 1e-6, 'Min learning rate')
 tf.flags.DEFINE_float('max_grad_norm', 40.0, 'Clip gradients to this norm.')
 tf.flags.DEFINE_integer('evaluation_interval', 100, 'Evaluate and print results every x epochs')
 tf.flags.DEFINE_integer('batch_size', 30, 'Batch size for training.')

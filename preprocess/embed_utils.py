@@ -5,6 +5,9 @@ from preprocess.file_utils import serialize, deserialize, DATA_DIR
 import os
 from gensim.models import Word2Vec
 
+from glove import Glove
+from glove import Corpus
+
 CORPUS_PATH = os.path.join(DATA_DIR, 'corpus.txt')
 EMBEDDING_SIZE = 300
 WINDOW_SIZE = 5
@@ -42,7 +45,7 @@ def read_corpus(filename):
     return corpus
 
 
-def main():
+def embed_word2vec():
     prepare_corpus()
     corpus = read_corpus(CORPUS_PATH)
     model = Word2Vec(corpus, size=EMBEDDING_SIZE, window=WINDOW_SIZE,
@@ -57,6 +60,26 @@ def main():
     serialize(word_embeddings, os.path.join(DATA_DIR, 'word_embeddings.bin'))
 
 
+def embed_glove():
+    # prepare_corpus()
+    corpus = read_corpus(CORPUS_PATH)
+    corpus_model = Corpus()
+    corpus_model.fit(corpus, window=5)
+    glove = Glove(no_components=300)
+    glove.fit(corpus_model.matrix, epochs=int(20),
+              no_threads=8, verbose=True)
+    dic = corpus_model.dictionary
+    index2word = [_PAD, _NULL] + sorted(dic, key=dic.get, reverse=False)
+    word2index = dict([(y, x) for (x, y) in enumerate(index2word)])
+    word_embeddings = [[0.0] * EMBEDDING_SIZE, [0.0] * EMBEDDING_SIZE]
+    for i in range(2, len(word2index)):
+        index = i - 2
+        word_embeddings.append(glove.word_vectors[index].tolist())
+    serialize(word2index, os.path.join(DATA_DIR, 'word2index_glove.bin'))
+    serialize(word_embeddings, os.path.join(DATA_DIR, 'word_embeddings_glove.bin'))
+
+
 if __name__ == '__main__':
-    main()
+    # embed_word2vec()
+    embed_glove()
     pass
